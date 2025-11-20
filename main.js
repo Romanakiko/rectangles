@@ -2,17 +2,18 @@ class RectangleTableGenerator {
     constructor(rectangles) {
         this.rectangles = rectangles;
         this.grid = [];
+        this.scaleFactor = this.getSoftScale();
         this.colors = [
             '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
             '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'
         ];
     }
 
-    getBoundaries() {
+    getBoundaries( rectangles ) {
         let minX = Infinity, minY = Infinity;
         let maxX = -Infinity, maxY = -Infinity;
 
-        this.rectangles.forEach(rect => {
+        rectangles.forEach(rect => {
             minX = Math.min(minX, rect.topLeft.x);
             minY = Math.min(minY, rect.topLeft.y);
             maxX = Math.max(maxX, rect.bottomRight.x);
@@ -22,14 +23,51 @@ class RectangleTableGenerator {
         return { minX, minY, maxX, maxY };
     }
 
+    getSoftScale() {
+        const gcdTwo = (a, b) => {
+            while (b !== 0) [a, b] = [b, a % b];
+            return a;
+        };
+        let sidesList = [];
+        this.rectangles.forEach(rect => {
+            sidesList.push((rect.bottomRight.x - rect.topLeft.x), (rect.topLeft.y - rect.bottomRight.y));
+        })
+
+        return 1 / sidesList.reduce((acc, side) => gcdTwo(acc, Math.abs(side)));
+    }
+
+    scaleCoordinates() {
+        const bounds = this.getBoundaries(this.rectangles);
+        const scaledRectangles = [];
+
+        this.rectangles.forEach(rect => {
+            const scaledRect = {
+                topLeft: {
+                    x: Math.round((rect.topLeft.x - bounds.minX) * this.scaleFactor),
+                    y: Math.round((rect.topLeft.y - bounds.minY) * this.scaleFactor)
+                },
+                bottomRight: {
+                    x: Math.round((rect.bottomRight.x - bounds.minX) * this.scaleFactor),
+                    y: Math.round((rect.bottomRight.y - bounds.minY) * this.scaleFactor)
+                }
+            };
+            scaledRectangles.push(scaledRect);
+        });
+
+        return {
+            scaledRectangles,
+            scaledWidth: Math.round((bounds.maxX - bounds.minX) * this.scaleFactor),
+            scaledHeight: Math.round((bounds.maxY - bounds.minY) * this.scaleFactor)
+        };
+    }
+
     createGrid() {
-        const bounds = this.getBoundaries();
-        const width = bounds.maxX - bounds.minX;
-        const height = bounds.maxY - bounds.minY;
+        const { scaledRectangles, scaledWidth, scaledHeight } = this.scaleCoordinates();
+        const bounds = this.getBoundaries(scaledRectangles);
 
-        this.grid = Array(height).fill().map(() => Array(width).fill(0));
+        this.grid = Array(scaledHeight).fill().map(() => Array(scaledWidth).fill(0));
 
-        this.rectangles.forEach((rect, index) => {
+        scaledRectangles.forEach((rect, index) => {
             const startX = rect.topLeft.x - bounds.minX;
             const startY = rect.topLeft.y - bounds.minY;
             const endX = rect.bottomRight.x - bounds.minX;
@@ -47,7 +85,7 @@ class RectangleTableGenerator {
         return this.grid;
     }
 
-    optimizeGrid() {
+    clearWhiteSpace() {
         if (this.grid.length === 0) return [];
 
         const rows = this.grid.length;
@@ -88,7 +126,7 @@ class RectangleTableGenerator {
 
     generateTable() {
         this.createGrid();
-        this.optimizeGrid();
+        this.clearWhiteSpace();
 
         if (this.grid.length === 0 || this.grid[0].length === 0) {
             return '<p>No rectangles to display</p>';
@@ -101,9 +139,9 @@ class RectangleTableGenerator {
             row.forEach(cell => {
                 if (cell > 0) {
                     const colorIndex = (cell - 1) % this.colors.length;
-                    html += `<td style="background-color: ${this.colors[colorIndex]}; border: 1px solid #333; width: 20px; height: 20px;"></td>`;
+                    html += `<td style="background-color: ${this.colors[colorIndex]}; border: 1px solid #333; width: ${cellSize}px; height: ${cellSize}px;"></td>`;
                 } else {
-                    html += '<td style="border: 1px solid #eee; width: 20px; height: 20px;"></td>';
+                    html += `<td style="border: 1px solid #eee; width: ${cellSize}px; height: ${cellSize}px;"></td>`;
                 }
             });
             html += '</tr>';
