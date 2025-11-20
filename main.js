@@ -131,6 +131,13 @@ class RectangleTableGenerator {
         if (this.grid.length === 0 || this.grid[0].length === 0) {
             return '<p>No rectangles to display</p>';
         }
+        const maxTableWidth = 800;
+        const maxTableHeight = 600;
+        const cellSize = Math.min(
+            Math.floor(maxTableWidth / this.grid[0].length),
+            Math.floor(maxTableHeight / this.grid.length),
+            30
+        );
 
         let html = '<table style="border-collapse: collapse; border: 1px solid #ccc;">';
 
