@@ -2,7 +2,7 @@ class RectangleTableGenerator {
     constructor(rectangles) {
         this.rectangles = rectangles;
         this.grid = [];
-        this.scaleFactor = this.getSoftScale();
+        [this.scaleFactor, this.sizeCorrector] = this.getScale();
         this.colors = [
             '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
             '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'
@@ -23,17 +23,22 @@ class RectangleTableGenerator {
         return { minX, minY, maxX, maxY };
     }
 
-    getSoftScale() {
+    getScale() {
         const gcdTwo = (a, b) => {
-            while (b !== 0) [a, b] = [b, a % b];
-            return a;
+        while (b !== 0) [a, b] = [b, a % b];
+        return a;
         };
+
         let sidesList = [];
         this.rectangles.forEach(rect => {
             sidesList.push((rect.bottomRight.x - rect.topLeft.x), (rect.topLeft.y - rect.bottomRight.y));
         })
+        const maxSide = Math.max(...sidesList)
+        const softScale = 1 / sidesList.reduce((acc, side) => gcdTwo(acc, Math.abs(side)))
+        const scaleFactor =  Math.min(40 / maxSide, softScale, 1);
+        const sizeCorrector = maxSide * scaleFactor / Math.round(maxSide * scaleFactor);
 
-        return 1 / sidesList.reduce((acc, side) => gcdTwo(acc, Math.abs(side)));
+        return [scaleFactor, sizeCorrector];
     }
 
     scaleCoordinates() {
@@ -171,7 +176,7 @@ class RectangleTableGenerator {
             Math.floor(maxTableWidth / this.grid[0].length),
             Math.floor(maxTableHeight / this.grid.length),
             30
-        );
+        ) * this.sizeCorrector;
 
         if (this.grid.length === 0 || this.grid[0].length === 0) {
             return '<p>No rectangles to display</p>';
