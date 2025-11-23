@@ -158,10 +158,79 @@ class RectangleTableGenerator {
         return html;
     }
 
+    generateCompactTable() {
+        this.createGrid();
+        // this.clearWhiteSpace();
+
+        if (this.grid.length === 0 || this.grid[0].length === 0) {
+            return '<p>No rectangles to display</p>';
+        }
+        const maxTableWidth = 800;
+        const maxTableHeight = 600;
+        const cellSize = Math.min(
+            Math.floor(maxTableWidth / this.grid[0].length),
+            Math.floor(maxTableHeight / this.grid.length),
+            30
+        );
+
+        if (this.grid.length === 0 || this.grid[0].length === 0) {
+            return '<p>No rectangles to display</p>';
+        }
+
+        let html = '<table style="border-collapse: collapse; border: 1px solid #ccc;">';
+
+        this.grid.forEach((row, y) => {
+            html += '<tr>';
+            row.forEach((cell, x) => {
+                if (cell > -1) {
+
+                    if(cell > 0) {
+                        let rowspan = 1;
+                        let colspan = 1;
+
+                        for (let paintY = y; paintY < this.grid.length; paintY++) {
+                            for (let paintX = x; paintX < this.grid[0].length; paintX++) {
+                                if (this.grid[paintY][paintX] === cell && !(paintX === x && paintY === y)) {
+                                    this.grid[paintY][paintX] = -1;
+
+                                    if(paintX === x) {
+                                        rowspan++;
+                                    }
+                                    if(paintY === y) {
+                                        colspan++
+                                    }
+                                }
+                            }
+                        }
+                        const colorIndex = (cell - 1) % this.colors.length;
+                        const width = cellSize * colspan;
+                        const height = cellSize * rowspan;
+
+                        html += `<td style="
+                            background-color: ${this.colors[colorIndex]};
+                            border: 1px solid #eee;
+                            width: ${width}px;
+                            height: ${height}px;" 
+                            rowspan="${rowspan}" 
+                            colspan="${colspan}">
+                        </td>`;
+                    } else {
+                        html += `<td style="border: 1px solid #eee; width: ${cellSize}px; height: ${cellSize}px;"></td>`;
+                    }
+                }
+            })
+            html += '</tr>';
+        })
+
+        html += '</table>';
+        return html;
+    }
+
     render(containerId) {
         const container = document.getElementById(containerId);
         if (container) {
-            container.innerHTML = this.generateTable();
+            // container.innerHTML = this.generateTable();
+            container.innerHTML = this.generateCompactTable();
         }
     }
 }
